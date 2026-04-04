@@ -11,12 +11,7 @@ data/osrm/
 data/processed/
 
 # Results (regenerable via scripts)
-results/*.csv
-results/*.npy
-results/*.pt
-
-# Keep figures for paper
-!results/figures/
+results/
 
 .env
 *.log
@@ -25,12 +20,23 @@ results/*.pt
 # OS
 .DS_Store
 
+# Paper & docs (kept locally, not in public repo)
+paper/
+docs/
+
+# Agent / editor config (local tooling)
+.cursor/
+.cursor/rules/
+.cursor/skills/
+.github/
+AGENTS.md
+
 # LaTeX build artifacts
-paper/*.aux
-paper/*.bbl
-paper/*.blg
-paper/*.out
-paper/*.fdb_latexmk
-paper/*.fls
-paper/*.synctex.gz
-paper/*.toc
+*.aux
+*.bbl
+*.blg
+*.out
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.toc
