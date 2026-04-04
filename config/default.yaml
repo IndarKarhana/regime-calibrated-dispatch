@@ -1,0 +1,63 @@
+data:
+  tlc_base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  months: ["2024-01", "2024-06"]
+  taxi_type: "yellow"
+  manhattan_bbox:
+    min_lon: -74.02
+    max_lon: -73.90
+    min_lat: 40.70
+    max_lat: 40.82
+  chicago_core_bbox:
+    min_lon: -87.78
+    max_lon: -87.58
+    min_lat: 41.82
+    max_lat: 41.96
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+osrm:
+  host: "http://localhost"
+  port: 5050
+  profile: "car"
+
+regime:
+  bin_interval_minutes: 5
+  block_hours: 4            # sub-day block length
+  event_detection:
+    method: "rolling_mad"   # or "pelt"
+    mad_threshold: 3.0
+    min_duration_bins: 2
+  prefix_window_minutes: 30
+  similarity_weights:
+    ks: 0.20
+    w1: 0.20
+    feat: 0.15
+    var: 0.10
+    event: 0.20
+    temporal: 0.15
+  top_k: 5
+
+simulator:
+  step_seconds: 30
+  fleet_size: 200
+  max_wait_seconds: 600     # request expires after 10 min
+  speed_kmh_fallback: 25    # only for haversine stub
+
+policies:
+  batch_window_seconds: 60
+
+rl:
+  algorithm: "ppo"
+  hidden_sizes: [128, 64]
+  lr: 3.0e-4
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_epsilon: 0.2
+  epochs_per_update: 4
+  episodes_per_update: 8
+  max_episodes: 500
+  h3_resolution: 8          # hex grid for observation
+
+evaluation:
+  seeds: [42, 123, 456, 789, 1024]
+  output_dir: "results"

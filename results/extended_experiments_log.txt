@@ -1,0 +1,147 @@
+Loading NYC data and regime library ...
+  373 regimes, 373 blocks, 5402161 trips
+
+================================================================================
+PART F: EXTENDED BASELINES
+  Configs: replay-greedy, replay-batch, cal+heuristic, cal+lp, cal_only
+================================================================================
+
+  jan_weekday_am fleet=492
+    replay_greedy       : wait=114.8s
+    replay_batch        : wait=106.0s
+    cal_only            : wait=90.0s
+    cal+heuristic       : wait=75.8s
+    cal+lp              : wait=73.8s
+
+  jan_weekday_pm fleet=604
+    replay_greedy       : wait=143.9s
+    replay_batch        : wait=106.0s
+    cal_only            : wait=98.7s
+    cal+heuristic       : wait=81.7s
+    cal+lp              : wait=83.7s
+
+  jan_nye_am fleet=204
+    replay_greedy       : wait=397.4s
+    replay_batch        : wait=187.7s
+    cal_only            : wait=161.3s
+    cal+heuristic       : wait=149.4s
+    cal+lp              : wait=148.3s
+
+  jan_nye_pm fleet=424
+    replay_greedy       : wait=531.5s
+    replay_batch        : wait=151.2s
+    cal_only            : wait=112.1s
+    cal+heuristic       : wait=95.3s
+    cal+lp              : wait=96.2s
+
+  jan_weekend_mid fleet=771
+    replay_greedy       : wait=98.7s
+    replay_batch        : wait=95.9s
+    cal_only            : wait=83.6s
+    cal+heuristic       : wait=68.3s
+    cal+lp              : wait=67.3s
+
+  jun_weekday_am fleet=671
+    replay_greedy       : wait=131.9s
+    replay_batch        : wait=105.8s
+    cal_only            : wait=94.9s
+    cal+heuristic       : wait=76.4s
+    cal+lp              : wait=78.0s
+
+  jun_weekday_pm fleet=942
+    replay_greedy       : wait=119.5s
+    replay_batch        : wait=99.5s
+    cal_only            : wait=88.9s
+    cal+heuristic       : wait=71.1s
+    cal+lp              : wait=72.2s
+
+  jun_late_night fleet=889
+    replay_greedy       : wait=196.3s
+    replay_batch        : wait=127.3s
+    cal_only            : wait=84.1s
+    cal+heuristic       : wait=68.6s
+    cal+lp              : wait=68.2s
+
+  EXTENDED BASELINES SUMMARY (avg across 8 scenarios):
+    replay_greedy       : 216.8s
+    replay_batch        : 122.4s
+    cal_only            : 101.7s
+    cal+heuristic       : 85.8s
+    cal+lp              : 85.9s
+
+  vs replay_batch (122.4s):
+    replay_greedy       : 216.8s  (-77.1%)
+    cal_only            : 101.7s  (+16.9%)
+    cal+heuristic       : 85.8s  (+29.9%)
+    cal+lp              : 85.9s  (+29.8%)
+  → Saved: results/extended_baselines.csv
+
+================================================================================
+PART G: TOP_K SENSITIVITY SWEEP
+================================================================================
+
+  jan_weekday_pm [2024-01-02_16-20] fleet=604
+    top_k=  1: wait=79.7s  (+24.9% vs replay)
+    top_k=  3: wait=75.1s  (+29.2% vs replay)
+    top_k=  5: wait=83.5s  (+21.3% vs replay)
+    top_k= 10: wait=76.4s  (+27.9% vs replay)
+    top_k= 20: wait=67.8s  (+36.1% vs replay)
+
+  jun_weekday_am [2024-06-03_08-12] fleet=671
+    top_k=  1: wait=76.3s  (+27.9% vs replay)
+    top_k=  3: wait=74.8s  (+29.3% vs replay)
+    top_k=  5: wait=78.0s  (+26.3% vs replay)
+    top_k= 10: wait=71.7s  (+32.2% vs replay)
+    top_k= 20: wait=68.6s  (+35.1% vs replay)
+
+  jun_late_night [2024-06-01_20-24] fleet=889
+    top_k=  1: wait=88.2s  (+30.7% vs replay)
+    top_k=  3: wait=73.5s  (+42.2% vs replay)
+    top_k=  5: wait=68.0s  (+46.6% vs replay)
+    top_k= 10: wait=75.8s  (+40.5% vs replay)
+    top_k= 20: wait=76.6s  (+39.8% vs replay)
+
+  TOP_K SUMMARY (avg across 3 scenarios):
+    top_k=  1: 81.4s  (+28.0%)
+    top_k=  3: 74.5s  (+34.1%)
+    top_k=  5: 76.5s  (+32.3%)
+    top_k= 10: 74.6s  (+34.0%)
+    top_k= 20: 71.0s  (+37.2%)
+  → Saved: results/topk_sensitivity.csv
+
+================================================================================
+PART H: BATCH WINDOW SENSITIVITY SWEEP
+================================================================================
+
+  jan_weekday_pm fleet=604
+    window= 15s: replay=92.1s  cal+lp=70.7s  Δ=+23.2%
+    window= 30s: replay=92.1s  cal+lp=70.9s  Δ=+23.0%
+    window= 60s: replay=106.0s  cal+lp=83.1s  Δ=+21.6%
+    window= 90s: replay=122.5s  cal+lp=98.2s  Δ=+19.9%
+    window=120s: replay=143.3s  cal+lp=113.2s  Δ=+21.0%
+
+  jun_weekday_am fleet=671
+    window= 15s: replay=90.3s  cal+lp=64.9s  Δ=+28.1%
+    window= 30s: replay=90.3s  cal+lp=64.7s  Δ=+28.4%
+    window= 60s: replay=105.8s  cal+lp=78.3s  Δ=+26.0%
+    window= 90s: replay=122.7s  cal+lp=92.8s  Δ=+24.4%
+    window=120s: replay=141.0s  cal+lp=107.9s  Δ=+23.5%
+
+  jun_late_night fleet=889
+    window= 15s: replay=112.6s  cal+lp=53.9s  Δ=+52.1%
+    window= 30s: replay=112.6s  cal+lp=54.2s  Δ=+51.9%
+    window= 60s: replay=127.3s  cal+lp=68.4s  Δ=+46.3%
+    window= 90s: replay=146.4s  cal+lp=84.2s  Δ=+42.5%
+    window=120s: replay=164.8s  cal+lp=99.4s  Δ=+39.7%
+
+  BATCH WINDOW SUMMARY:
+     15s: replay=98.3s  cal+lp=63.2s  (+35.8%)
+     30s: replay=98.3s  cal+lp=63.3s  (+35.7%)
+     60s: replay=113.0s  cal+lp=76.6s  (+32.2%)
+     90s: replay=130.5s  cal+lp=91.7s  (+29.7%)
+    120s: replay=149.7s  cal+lp=106.8s  (+28.6%)
+  → Saved: results/batchwindow_sensitivity.csv
+
+================================================================================
+EXTENDED EXPERIMENTS COMPLETE in 788s (13.1min)
+================================================================================

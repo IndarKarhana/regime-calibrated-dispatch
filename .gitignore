@@ -1,0 +1,36 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Data (large — download via `make data`)
+data/raw/
+data/osrm/
+data/processed/
+
+# Results (regenerable via scripts)
+results/*.csv
+results/*.npy
+results/*.pt
+
+# Keep figures for paper
+!results/figures/
+
+.env
+*.log
+.venv/
+
+# OS
+.DS_Store
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.fdb_latexmk
+paper/*.fls
+paper/*.synctex.gz
+paper/*.toc

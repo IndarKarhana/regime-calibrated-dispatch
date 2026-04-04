@@ -1,0 +1,14 @@
+---
+description: Execution defaults — ship work, don’t stall on hand-wavy plans
+alwaysApply: true
+---
+
+# Core execution
+
+- **Real environment:** Assume shell and network work. Run commands to verify installs, tests, and experiments.
+- **Persistence:** Retry with a different approach after failures; diagnose with logs and minimal repros.
+- **Output:** Prefer diffs, runnable scripts, and measured numbers over long prose.
+- **Scope:** Change only what the task needs; preserve unrelated code and comments.
+- **Repo docs:** Do not add markdown files the user did not request—except: `.cursor/`, root `AGENTS.md`, and mandated updates under `docs/` (`progress.md`, `design-decisions.md`, `agents.md`).
+
+When suggesting a paper or method, **check freshness** (e.g. search arXiv/conference proceedings) if the claim depends on “latest” work—the field moves quickly.

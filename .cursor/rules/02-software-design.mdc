@@ -1,0 +1,14 @@
+---
+description: Software design for simulators, experiments, and numerical code
+globs: "**/*.{py,rs,go,ts,tsx,js,mjs,cpp,h,hpp}"
+alwaysApply: false
+---
+
+# Software design (code touched in this repo)
+
+- **Separation:** Simulation core (state transition), policies (dispatch/rebalance), routing adapter (OSRM/GH client), data ingest—**thin boundaries**, explicit interfaces.
+- **Determinism:** Seeded RNGs; log config + git hash (or version file) for runs meant for comparison.
+- **Config:** Hyperparameters and scenario knobs in one place (e.g. YAML/TOML), not scattered literals.
+- **Performance:** Profile before micro-optimizing; batch routing/matrix requests when the engine allows.
+- **Types & tests:** Prefer typed Python (or equivalent) for numerical code; add tests for state transitions and one end-to-end tiny scenario.
+- **No speculative enterprise patterns** unless scale demands them—favor readable research code.
