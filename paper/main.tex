@@ -26,10 +26,6 @@
 \newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{lemma}[theorem]{Lemma}
 
-% Draft helpers (remove for submission)
-\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
-\newcommand{\fixme}[1]{\textcolor{orange}{\textbf{FIXME:} #1}}
-
 \graphicspath{{../results/figures/}}
 
 % ── Title ────────────────────────────────────────────────────────────────────
@@ -37,7 +33,12 @@
 \title{Regime-Calibrated Demand Priors for\\Ride-Hailing Fleet Dispatch and Repositioning}
 
 \author{
-  \IEEEauthorblockN{Indar Kumar and Akanksha Tiwari}
+  \IEEEauthorblockN{Indar Kumar}
+  \IEEEauthorblockA{Independent Researcher\\
+    \texttt{github.com/IndarKarhana}}
+  \and
+  \IEEEauthorblockN{Akanksha Tiwari}
+  \IEEEauthorblockA{Independent Researcher}
 }
 
 \begin{document}
@@ -63,12 +64,12 @@ Evaluated on \num{5.2} million NYC TLC trips across 8~diverse scenarios
 \textbf{\SI{31.1}{\percent}} (bootstrap 95\% CI:
 $[26.5, 36.6]\%$; Friedman $\chi^2 = 80.0$, $p = 4.25 \times 10^{-18}$;
 all three method pairs significantly different by Nemenyi post-hoc;
-Cohen's $d = 7.5$--$29.9$ across scenarios). The improvement is
-\emph{strongest at the tail}: P95 wait drops \SI{37.6}{\percent} and the
-Gini coefficient of wait times falls from 0.441 to 0.409. Contributions are
-additive and independently validated: calibration alone provides
-\SI{16.4}{\percent} reduction; LP repositioning adds a further
-\SI{16.7}{\percent}. The approach requires no training, is
+Cohen's $d = 7.5$--$29.9$ across scenarios). The improvement extends to the tail: P95 wait drops \SI{37.6}{\percent}
+and the Gini coefficient of wait times improves from 0.441 to 0.409
+(\SI{7.3}{\percent} relative). The two contributions compose
+multiplicatively and are independently validated: calibration provides
+\SI{16.9}{\percent} reduction; LP repositioning adds a further
+\SI{15.5}{\percent}. The approach requires no training, is
 deterministic and explainable, generalizes to Chicago (\SI{23.3}{\percent}
 wait reduction via NYC-built regime library), and is robust across fleet
 sizes (\SIrange{32}{47}{\percent} improvement for $0.5$--$2\times$ fleet
@@ -250,7 +251,9 @@ comparisons.
 \label{sec:method:calibration}
 
 The top-$k$ matched regimes (default $k=5$) are combined into a calibrated
-demand prior. For each time bin $t$:
+demand prior---we use ``calibrated'' in the operational sense of adjusting
+a demand estimate using retrieved historical analogues, distinct from the
+statistical sense of probability calibration. For each time bin $t$:
 
 \begin{equation}
   \hat{\lambda}(t) = \sum_{i=1}^{k} \alpha_i \cdot r_i(t), \quad
@@ -450,7 +453,11 @@ by concentrating weight on higher-similarity (lower-error) regimes, the
 calibrated prior has provably no worse error than the na\"ive average.
 The critical assumption---consistency of the similarity ranking---is the
 primary design goal of the six-metric ensemble and is empirically
-testable (we validate it in \Cref{sec:ablation}).
+testable; we assess it indirectly in \Cref{sec:ablation}, where the
+similarity component ablation shows that distributional metrics---which
+most directly measure demand-shape proximity---drive the majority of
+matching quality. Direct per-regime consistency testing is left to
+future work.
 
 \subsection{Metric and Matching Properties}
 
@@ -502,8 +509,9 @@ since $\sum w_m \cdot 1 = 1$.
 Within each batch window, the Hungarian
 algorithm~\cite{kuhn1955hungarian} computes the minimum total pickup
 distance assignment between $n$ pending requests and $m \geq n$
-available drivers in $O(n^2 m)$ time. This is \emph{within-batch
-optimal} but myopic: it does not account for future requests that may
+available drivers in $O(n^2 m)$ time for the rectangular case
+(our implementation pads to a square matrix, yielding
+$O(\max(n,m)^3)$). This is \emph{within-batch optimal} but myopic: it does not account for future requests that may
 arrive in subsequent windows.
 \end{lemma}
 
@@ -517,7 +525,7 @@ arrive in subsequent windows.
 \subsection{Datasets}
 
 \textbf{NYC TLC 2024.} Yellow taxi trip records~\cite{nyctlc2024} for January and June
-2024 (\num{5.2e6} trips after filtering to Manhattan). Provides diverse
+2024 (5.2 million trips after filtering to Manhattan). Provides diverse
 temporal coverage: winter/summer, weekday/weekend, New Year's Eve,
 Friday nights.
 
@@ -588,7 +596,7 @@ We report:
   \item Per-scenario paired Wilcoxon signed-rank tests with Bonferroni
     correction for 8 comparisons.
   \item Friedman test~\cite{friedman1937use} across all scenario $\times$ seed blocks.
-  \item Nemenyi post-hoc test with critical difference diagram.
+  \item Nemenyi post-hoc test for pairwise comparisons.
   \item Cohen's $d$ effect sizes~\cite{cohen1988statistical}.
   \item Bootstrap 95\% CIs~\cite{efron1993bootstrap} for the grand mean improvement
     (10,000 hierarchical resamples).
@@ -609,7 +617,7 @@ We report:
   \label{tab:main_results}
   \begin{tabular}{@{}lrrrrr@{}}
     \toprule
-    Scenario & Replay (s) & Cal+LP (s) & Improv. & 95\% CI & Cohen's $d$ \\
+    Scenario & Replay+Batch (s) & Cal+LP (s) & Improv. & 95\% CI & Cohen's $d$ \\
     \midrule
     jun\_late\_night    & $127.8 \pm 1.1$ & $69.5 \pm 2.6$ & $-45.6\%$ & $[43.9, 47.3]$ & 21.7 \\
     jan\_nye\_pm        & $152.1 \pm 1.8$ & $93.0 \pm 6.0$ & $-38.9\%$ & $[35.8, 42.0]$ & 10.5 \\
@@ -626,8 +634,8 @@ We report:
 \end{table*}
 
 \Cref{tab:main_results} presents the per-scenario results. All 8~scenarios
-show statistically significant improvements, with a grand mean reduction
-of \SI{31.1}{\percent} in mean wait time.
+show consistent, large-magnitude improvements, with a grand mean
+reduction of \SI{31.1}{\percent} in mean wait time.
 \Cref{fig:scenario_bars} visualizes the per-scenario gains with
 95\% confidence intervals: the bars reveal a clear pattern where
 demand-volatile periods benefit most---Friday night
@@ -647,11 +655,16 @@ variance across all scenarios.
 
 \subsection{Component Decomposition}
 
-The improvement decomposes additively: calibration alone provides
-\SI{16.4}{\percent} average wait reduction (by generating demand from
-a more representative prior), and LP repositioning contributes an
-additional \SI{16.7}{\percent} (by pre-positioning idle drivers).
-See \Cref{fig:decomposition}.
+The two contributions compose multiplicatively.
+Relative to the replay+batch baseline (\Cref{tab:extended_baselines}),
+calibration alone reduces mean wait by \SI{16.9}{\percent}
+(from \SI{122.4}{\second} to \SI{101.7}{\second}). Adding LP
+reposit\-ioning further reduces the \emph{remaining} wait by
+\SI{15.5}{\percent} (from \SI{101.7}{\second} to \SI{85.9}{\second}).
+The compound reduction is $1-(1-0.169)(1-0.155)=29.8\%$, consistent
+with the \SI{31.1}{\percent} in the 5-seed main experiment
+(\Cref{tab:main_results}). \Cref{fig:decomposition} visualizes
+this decomposition.
 
 \begin{figure}[t]
   \centering
@@ -716,10 +729,16 @@ across scenarios, showing consistently lower inequality under our method.
 
 \subsection{Cross-City Transfer}
 
-Using the NYC-trained regime library on Chicago TNP data (no retraining),
-Cal+LP achieves \SI{23.3}{\percent} average wait reduction across 3
-scenarios, demonstrating spatial generalization of the regime-matching
-approach.
+Using the NYC-built regime library on Chicago TNP data (no retraining
+or local calibration), Cal+LP achieves \SI{23.3}{\percent} average
+wait reduction across 3~scenarios: \SI{17.2}{\percent} (weekday AM,
+\SI{260}{\second}$\to$\SI{215}{\second}), \SI{30.0}{\percent}
+(weekday PM, \SI{316}{\second}$\to$\SI{221}{\second}), and
+\SI{22.8}{\percent} (weekend midday,
+\SI{226}{\second}$\to$\SI{174}{\second}). The higher absolute
+waits reflect Chicago's larger area and lower taxi density. Demand
+\emph{shapes}---rush-hour peaks, weekend troughs---are qualitatively
+similar across cities, enabling regime transfer without retraining.
 
 \subsection{Statistical Tests}
 
@@ -743,7 +762,9 @@ two-sided, or $0.03125$ one-sided).
 We note three mitigating factors. First, the \emph{effect sizes} are
 uniformly \emph{very large}: Cohen's $d$ ranges from 5.5
 (jan\_weekday\_pm) to 29.9 (jun\_weekday\_pm), with overall $d = 15.7$;
-by convention, $d > 0.8$ is already ``large.''
+by convention, $d > 0.8$ is already ``large.'' (These extreme values
+reflect the low seed-to-seed variance of a near-deterministic
+simulator, not a clinical-scale effect.)
 Second, the Friedman test---which pools information across all
 scenarios and seeds---is overwhelmingly significant ($p < 10^{-17}$).
 Third, the bootstrap 95\% CI for the grand mean improvement is
@@ -777,10 +798,14 @@ See \Cref{fig:fleet_sensitivity}.
 \subsection{OSRM Routing Fidelity}
 
 Under OSRM road-network routing, improvement vanishes at $1\times$ fleet
-(\SI{3}{\percent}) due to fleet under-provisioning (88\% busy). Scaling
-fleet by $1.45\times$ (matching effective capacity) recovers the
-improvement to \SI{25.7}{\percent}, confirming the routing engine is not
-the driver of gains (\Cref{fig:osrm_recovery}).
+(\SI{3}{\percent}) due to fleet under-provisioning (88\% busy). OSRM
+travel times in Manhattan average ${\sim}1.45\times$ the Haversine
+baseline at 30\,km/h, reflecting one-way streets, grid detours, and
+turn penalties. Scaling fleet by $1.45\times$ compensates for this
+effective-capacity gap and recovers the improvement to
+\SI{25.7}{\percent}, confirming that the routing engine amplifies
+travel times but the calibration gain is preserved
+(\Cref{fig:osrm_recovery}).
 
 \begin{figure}[t]
   \centering
@@ -803,7 +828,14 @@ bars show that removing event and temporal components actually
 \emph{improves} matching quality, suggesting these metrics
 over-constrain regime selection by favoring calendar similarity over
 demand-shape similarity. This finding motivates future work on
-automated weight selection.
+automated weight selection. We retain the full 6-metric ensemble as
+the default because (i)~the event and temporal components target edge
+cases (holidays, anomalous surges) that may be under-represented in
+the current 8-scenario test set, and (ii)~distributional-only matching
+risks overfitting to demand-shape similarity when calendar context
+(e.g., weekday vs.\ weekend) is informative. Reporting the
+4-metric result alongside the 6-metric default gives practitioners
+the information to choose.
 
 \begin{figure}[t]
   \centering
@@ -872,10 +904,12 @@ and matching specificity.
 Shorter batch windows yield lower absolute wait times for both replay
 and calibrated + LP configurations, but the \emph{relative} improvement
 of cal+LP over replay is stable across windows
-(\Cref{tab:batchwindow}). At $W=15$\,s the improvement is
-\SI{35.8}{\percent}; at $W=120$\,s it is \SI{28.6}{\percent}. The
+(\Cref{tab:batchwindow}). At $W=30$\,s the improvement is
+\SI{35.7}{\percent}; at $W=120$\,s it is \SI{28.6}{\percent}. The
 default $W=60$\,s (\SI{32.2}{\percent}) balances computational
-cost and matching quality. Notably, both the baseline and our method
+cost and matching quality.\footnote{The simulator's 30\,s time step
+imposes a floor: any $W < 30$\,s batches every step, so we omit
+sub-step windows.} Notably, both the baseline and our method
 benefit from shorter windows, confirming that batch size is
 orthogonal to calibration quality.
 
@@ -883,11 +917,10 @@ orthogonal to calibration quality.
   \centering
   \caption{Batch window sensitivity (3 scenarios, 3 seeds)}
   \label{tab:batchwindow}
-  \begin{tabular}{@{}crrrr@{}}
+  \begin{tabular}{@{}crrr@{}}
     \toprule
     $W$ (s) & Replay (s) & Cal+LP (s) & Improv. \\
     \midrule
-     15 &  98.3 &  63.2 & $+35.8\%$ \\
      30 &  98.3 &  63.3 & $+35.7\%$ \\
      60 & 113.0 &  76.6 & $+32.2\%$ \\
      90 & 130.5 &  91.7 & $+29.7\%$ \\
@@ -931,9 +964,12 @@ batch-competitive performance. Root causes identified:
 (iii)~non-stationarity of demand across blocks,
 (iv)~credit assignment difficulty in multi-agent matching, and
 (v)~training instability that worsened in later phases despite
-LR/entropy decay. This supports the LP approach: when the objective
-has structure (linear cost, flow constraints), optimization outperforms
-learning.
+LR/entropy decay. We note that 2,000 episodes is modest by deep RL
+standards; a dedicated effort with more advanced architectures
+(e.g., attention-based multi-agent methods) could narrow the gap.
+Nonetheless, the result supports the LP approach: when the objective
+has structure (linear cost, flow constraints), optimization provides
+strong performance without the sample and compute costs of learning.
 
 \subsection{Computational Cost}
 
@@ -1027,7 +1063,8 @@ segments historical demand into regimes, matches the current period to
 the most similar analogues via a six-metric ensemble, and uses the
 resulting calibrated prior for LP-based fleet repositioning. On
 8~diverse NYC scenarios, the method achieves \SI{31.1}{\percent}
-average wait reduction with all scenarios statistically significant,
+average wait reduction with all scenarios showing large and consistent
+improvement,
 strongest improvement at the distribution tail (\SI{37.6}{\percent} at
 P95), and cross-city generalization to Chicago (\SI{23.3}{\percent}).
 The approach requires no training, is deterministic and explainable,
@@ -1105,6 +1142,7 @@ J.~D.~Hamilton,
 ``A new approach to the economic analysis of nonstationary time series and the business cycle,''
 \emph{Econometrica}, vol.~57, no.~2, pp.~357--384, 1989.
 
+% NOTE: For double-blind submission, anonymize this self-citation
 \bibitem{kumar2026rg}
 I.~Kumar, A.~Tiwari, S.~K.~Jasti, and A.~H.~Lade,
 ``RG-TTA: Regime-guided meta-control for test-time adaptation in
@@ -1156,6 +1194,7 @@ pp.~462--467, 2017.
 I.~Brodsky,
 ``H3: Uber's hexagonal hierarchical spatial index,''
 Uber Engineering Blog, 2018.
+[Online]. Available: \url{https://eng.uber.com/h3/}
 
 \bibitem{cohen1988statistical}
 J.~Cohen,
@@ -1253,6 +1292,8 @@ Experiments are reproducible via:
 \begin{verbatim}
 make install        # dependencies
 make data           # download TLC data
+make osrm-prepare   # OSRM data (Part D only)
+make osrm-up        # start OSRM (Part D only)
 python scripts/paper_experiments.py
 python scripts/extended_experiments.py
 python scripts/statistical_tests.py
