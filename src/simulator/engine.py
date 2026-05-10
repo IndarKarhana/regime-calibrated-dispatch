@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 from typing import Protocol
 
+import h3
 import numpy as np
 
 from src.config import get_config
@@ -61,6 +62,7 @@ class SimulationEngine:
         self._reposition_policy = reposition_policy
         self._reposition_interval = reposition_interval_steps
         self._bbox = bbox
+        self._fairness_h3_res = get_config()["rl"]["h3_resolution"]
 
     def run(self) -> SimState:
         state = self._init_state()
@@ -150,21 +152,27 @@ class SimulationEngine:
             )
             if dist < 100:
                 continue
-            valid.append((drv, inst))
+            valid.append((drv, inst, dist))
 
         if not valid:
             return
 
         # Batch routing
-        pairs = [((d.lon, d.lat), (i.target_lon, i.target_lat)) for d, i in valid]
+        pairs = [
+            ((d.lon, d.lat), (i.target_lon, i.target_lat))
+            for d, i, _ in valid
+        ]
         travel_times = self._router.batch_travel_times(pairs)
 
-        for (drv, inst), tt in zip(valid, travel_times):
+        for (drv, inst, dist), tt in zip(valid, travel_times):
             drv.status = DriverStatus.EN_ROUTE_PICKUP
             drv.current_request = None
             drv.remaining_seconds = tt
             drv.dest_lon = inst.target_lon
             drv.dest_lat = inst.target_lat
+            state.metrics.total_reposition_distance_m += dist
+            state.metrics.total_reposition_seconds += tt
+            state.metrics.reposition_legs += 1
 
     def _step_drivers(self, state: SimState) -> None:
         # First pass: identify drivers arriving at pickup that need trip routing
@@ -193,6 +201,13 @@ class SimulationEngine:
                     req.picked_up = True
                     req.wait_time = state.time - req.time + abs(drv.remaining_seconds)
                     state.metrics.wait_times.append(req.wait_time)
+                    state.metrics.wait_zone_ids.append(
+                        h3.latlng_to_cell(
+                            req.pickup_lat,
+                            req.pickup_lon,
+                            self._fairness_h3_res,
+                        )
+                    )
                     state.metrics.total_wait_seconds += req.wait_time
                     # Defer trip routing to batch call
                     need_trip_tt.append((drv, req))

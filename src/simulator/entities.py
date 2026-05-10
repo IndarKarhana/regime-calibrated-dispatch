@@ -61,8 +61,12 @@ class MetricsAccumulator:
     expired_requests: int = 0
     total_wait_seconds: float = 0.0
     total_pickup_distance_m: float = 0.0
+    total_reposition_distance_m: float = 0.0
+    total_reposition_seconds: float = 0.0
+    reposition_legs: int = 0
     total_idle_seconds: float = 0.0
     wait_times: list[float] = field(default_factory=list)
+    wait_zone_ids: list[str] = field(default_factory=list)
 
 
 @dataclass

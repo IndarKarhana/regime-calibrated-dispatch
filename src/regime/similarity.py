@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 from scipy import stats
 
 from src.config import get_config
-from src.regime.store import RegimeRecord, RegimeLibrary, _compute_summary_features, _compute_ecdf
 from src.regime.events import SurgeEvent, annotate_events
+from src.regime.store import RegimeLibrary, RegimeRecord, _compute_summary_features
+
+COMPONENT_KEYS = ("ks", "w1", "feat", "var", "event", "temporal")
+WeightSpec = dict[str, float] | Callable[
+    [np.ndarray, list[SurgeEvent], str | None], dict[str, float]
+]
 
 
 def sim_ks(q_series: np.ndarray, s_series: np.ndarray) -> float:
@@ -152,11 +159,46 @@ def _adaptive_weights(
     return w
 
 
+def weights_to_dict(weights: np.ndarray | list[float] | tuple[float, ...]) -> dict[str, float]:
+    """Convert a six-vector to a component-weight dict."""
+    arr = np.asarray(weights, dtype=float)
+    if arr.shape[0] != len(COMPONENT_KEYS):
+        raise ValueError(f"Expected {len(COMPONENT_KEYS)} weights, got {arr.shape[0]}")
+    total = float(np.sum(arr))
+    if total <= 0:
+        arr = np.ones(len(COMPONENT_KEYS), dtype=float) / len(COMPONENT_KEYS)
+    else:
+        arr = arr / total
+    return {k: float(v) for k, v in zip(COMPONENT_KEYS, arr)}
+
+
+def component_scores(
+    q_series: np.ndarray,
+    q_events: list[SurgeEvent],
+    record: RegimeRecord,
+    q_block_id: str | None = None,
+) -> np.ndarray:
+    """Return raw component similarities in canonical order.
+
+    This helper supports learned weighting and diagnostics while preserving
+    ``compute_similarity`` as the public scoring API.
+    """
+    q_feats = _compute_summary_features(q_series)
+    return np.array([
+        sim_ks(q_series, record.demand_series),
+        sim_w1(q_series, record.demand_series),
+        sim_feat(q_feats, record.summary_features),
+        sim_var(q_series, record.demand_series),
+        sim_event(q_events, record.events),
+        sim_temporal(q_block_id, record.block_id) if q_block_id and record.block_id else 0.0,
+    ], dtype=np.float64)
+
+
 def compute_similarity(
     q_series: np.ndarray,
     q_events: list[SurgeEvent],
     record: RegimeRecord,
-    weights: dict[str, float] | None = None,
+    weights: WeightSpec | None = None,
     q_block_id: str | None = None,
 ) -> float:
     """Weighted ensemble similarity between a query batch and a stored regime.
@@ -166,26 +208,14 @@ def compute_similarity(
     metrics (KS, W1, feat). Temporal proximity boosts same-season/day-type matches.
     """
     cfg = get_config()["regime"]["similarity_weights"]
-    base_w = weights or cfg
+    if callable(weights):
+        base_w = weights(q_series, q_events, q_block_id)
+    else:
+        base_w = weights or cfg
 
     w = _adaptive_weights(base_w, q_events, record.events)
-
-    q_feats = _compute_summary_features(q_series)
-    s_feats = record.summary_features
-
-    score = (
-        w.get("ks", 0) * sim_ks(q_series, record.demand_series)
-        + w.get("w1", 0) * sim_w1(q_series, record.demand_series)
-        + w.get("feat", 0) * sim_feat(q_feats, s_feats)
-        + w.get("var", 0) * sim_var(q_series, record.demand_series)
-        + w.get("event", 0) * sim_event(q_events, record.events)
-    )
-
-    temp_w = w.get("temporal", 0)
-    if temp_w > 0 and q_block_id and record.block_id:
-        score += temp_w * sim_temporal(q_block_id, record.block_id)
-
-    return float(score)
+    comps = component_scores(q_series, q_events, record, q_block_id=q_block_id)
+    return float(sum(w.get(k, 0.0) * comps[i] for i, k in enumerate(COMPONENT_KEYS)))
 
 
 def query_library(
@@ -194,6 +224,7 @@ def query_library(
     q_events: list[SurgeEvent] | None = None,
     top_k: int | None = None,
     q_block_id: str | None = None,
+    weights: WeightSpec | None = None,
 ) -> list[tuple[str, float]]:
     """Return top-K (block_id, similarity) pairs sorted descending."""
     cfg = get_config()["regime"]
@@ -204,7 +235,7 @@ def query_library(
 
     scores = []
     for bid, rec in library.records.items():
-        s = compute_similarity(q_series, q_events, rec, q_block_id=q_block_id)
+        s = compute_similarity(q_series, q_events, rec, weights=weights, q_block_id=q_block_id)
         scores.append((bid, s))
 
     scores.sort(key=lambda x: x[1], reverse=True)

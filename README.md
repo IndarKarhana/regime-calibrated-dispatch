@@ -1,6 +1,6 @@
 # Regime-Calibrated Dispatch Optimization for Ride-Hailing
 
-**26.3% average wait time reduction** over replay baselines — no training required.
+**31.1% average wait time reduction** over replay baselines — no training required.
 
 A research-grade system that matches current demand conditions to a library of historical "regimes" via distributional similarity, calibrates a generative demand prior, and uses LP-based anticipatory repositioning to proactively balance fleet supply. Evaluated on NYC TLC 2024 data across 8 diverse scenarios (winter/summer, weekday/weekend/holiday/night).
 
@@ -10,17 +10,17 @@ A research-grade system that matches current demand conditions to a library of h
 
 | Scenario | Replay Wait | Calibrated Only | Cal + LP | vs Replay |
 |----------|-------------|-----------------|----------|-----------|
-| jan_nye_am | 189s | 165s | 158s | **-16.4%** |
-| jan_nye_pm | 151s | 111s | 100s | **-33.6%** |
-| jan_weekday_am | 106s | 91s | 76s | **-28.0%** |
-| jan_weekday_pm | 106s | 98s | 86s | **-18.9%** |
-| jan_weekend_mid | 96s | 83s | 71s | **-26.0%** |
-| jun_late_night | 127s | 85s | 73s | **-42.5%** |
-| jun_weekday_am | 106s | 94s | 82s | **-22.5%** |
-| jun_weekday_pm | 99s | 87s | 77s | **-22.8%** |
-| **AVERAGE** | **122s** | **102s** | **90s** | **-26.3%** |
+| jan_nye_am | 189.6s | 164.8s | 147.8s | **-22.1%** |
+| jan_nye_pm | 152.1s | 108.9s | 93.0s | **-38.9%** |
+| jan_weekday_am | 106.4s | 90.8s | 73.5s | **-30.9%** |
+| jan_weekday_pm | 107.2s | 99.3s | 81.8s | **-23.7%** |
+| jan_weekend_mid | 96.2s | 84.7s | 66.6s | **-30.7%** |
+| jun_late_night | 127.8s | 85.0s | 69.5s | **-45.6%** |
+| jun_weekday_am | 107.2s | 94.0s | 78.0s | **-27.3%** |
+| jun_weekday_pm | 99.8s | 88.7s | 69.8s | **-30.0%** |
+| **AVERAGE** | **123.3s** | **101.8s** | **85.0s** | **-31.1%** |
 
-The improvement decomposes cleanly: **-16.4% from calibration** + **-11.9% from LP repositioning**.
+The improvement decomposes into **~16.9% from calibration** plus a further **~15.5% from repositioning** in the current paper analysis. Extended 3-seed baselines show LP and the simpler heuristic are statistically close in aggregate; Path 2 will rework this into a stronger tier-1 transportation submission.
 
 ### Comparison with Published Research
 
@@ -30,9 +30,9 @@ The improvement decomposes cleanly: **-16.4% from calibration** + **-11.9% from 
 | RL from Optimization Proxy (IJCAI 2023) | ~10-15% | Yes (RL) |
 | AAVR Framework (Dec 2024) | 22.7% | Yes (ML) |
 | Sim-informed RL (Namdarpour & Chow 2025) | 27.3% | Yes (RL, ride-pooling) |
-| **Ours: Calibrated Prior + LP** | **26.3%** | **No** |
+| **Ours: Calibrated Prior + LP** | **31.1%** | **No** |
 
-Key advantages: (1) No training — deterministic and explainable, (2) novel regime-similarity calibration not found in published baselines, (3) two independent contributions validated with ablations, (4) robust across seasons/holidays/day types without retraining.
+Key advantages: (1) no training for the current default method, (2) interpretable regime-similarity calibration, (3) separate calibration and repositioning ablations, and (4) robustness across seasons/holidays/day types without retraining. The next research phase replaces cited-number comparisons with re-implemented external baselines.
 
 ---
 
@@ -152,7 +152,7 @@ python scripts/benchmark_checkpoints.py 3
 # Cross-scenario ablation (8 scenarios, ~10 min)
 python scripts/cross_scenario_ablation.py
 
-# End-to-end pipeline with tuned LP (8 scenarios × 3 seeds)
+# End-to-end pipeline with tuned LP
 python scripts/comprehensive_eval.py --router osrm --lp-lookahead 5.0 --lp-move-frac 0.50
 
 # Cross-city Chicago + OSRM comparison
@@ -163,7 +163,7 @@ python scripts/cross_city_and_tuned_eval.py --router osrm
 
 ## Key Contributions
 
-### 1. Regime-Calibrated Demand Prior (-16.4% wait avg)
+### 1. Regime-Calibrated Demand Prior (~16.9% wait avg)
 
 A **regime library** indexes historical demand into sub-day blocks (4h each, 373 blocks from Jan+Jun 2024). Each block stores the demand time series, ECDF, summary features, detected events (surges/dips), and 2000 raw OD coordinate pairs.
 
@@ -171,7 +171,7 @@ At query time, a **6-component similarity ensemble** (KS distance, Wasserstein-1
 
 The matched regimes form a **calibrated prior**: a weighted mixture of demand rate profiles with quantile mapping and a spatial OD pool. Volume is matched to replay trip counts for fair comparison.
 
-### 2. LP Anticipatory Repositioning (-11.9% wait avg on top of calibration)
+### 2. LP Anticipatory Repositioning (~15.5% wait avg on top of calibration)
 
 A rolling-horizon **min-cost transportation LP** uses the calibrated prior's per-zone demand forecast to proactively redistribute idle drivers:
 
@@ -180,7 +180,7 @@ A rolling-horizon **min-cost transportation LP** uses the calibrated prior's per
 3. Solve LP: maximize demand served − α·travel cost, subject to supply/demand/budget constraints
 4. Move up to 50% of idle drivers toward underserved zones
 
-Also includes a simpler **demand-following heuristic** baseline (greedy move toward highest-demand zone). LP consistently outperforms heuristic across scenarios.
+Also includes a simpler **demand-following heuristic** baseline (greedy move toward highest-demand zone). Current extended baselines show the heuristic and LP are close in aggregate; LP is most useful when enough idle fleet exists for strategic reallocation.
 
 ### 3. RL Repositioning (Negative Result)
 
@@ -204,18 +204,18 @@ Higher move fractions dominate; short lookaheads are marginally best. Optimal: *
 
 ## Cross-Scenario Robustness
 
-Calibration beats replay in **8/8 scenarios** for batch dispatch:
+Calibrated + LP beats replay in **8/8 scenarios** for batch dispatch:
 
 | Scenario | Improvement | Notes |
 |----------|-------------|-------|
-| jun_late_night | **-42.5%** | Best: demand patterns very distinctive |
-| jan_nye_pm | **-33.6%** | Holiday PM well-matched |
-| jan_weekday_am | **-28.0%** | Standard commute |
-| jan_weekend_mid | **-26.0%** | Fixed by temporal proximity metric |
-| jun_weekday_am | **-22.5%** | Summer weekday |
-| jun_weekday_pm | **-22.8%** | Summer PM |
-| jan_weekday_pm | **-18.9%** | Winter PM |
-| jan_nye_am | **-16.4%** | Holiday morning |
+| jun_late_night | **-45.6%** | Best: demand patterns very distinctive |
+| jan_nye_pm | **-38.9%** | Holiday PM well-matched |
+| jan_weekday_am | **-30.9%** | Standard commute |
+| jan_weekend_mid | **-30.7%** | Fixed by temporal proximity metric |
+| jun_weekday_pm | **-30.0%** | Summer PM |
+| jun_weekday_am | **-27.3%** | Summer weekday |
+| jan_weekday_pm | **-23.7%** | Winter PM |
+| jan_nye_am | **-22.1%** | Holiday morning |
 
 Key ablation insights:
 - **Temporal proximity** fixed cross-seasonal contamination (jan_weekend_mid: was -5%, now -26%)
@@ -246,14 +246,12 @@ All hyperparameters live in [`config/default.yaml`](config/default.yaml):
 
 ---
 
-## Project Documentation
+## Reproducibility
 
-| Document | Purpose |
-|----------|---------|
-| [`docs/progress.md`](docs/progress.md) | Session log, results tables, environment facts |
-| [`docs/design-decisions.md`](docs/design-decisions.md) | ADRs: why, what, when for each major choice |
-| [`docs/agents.md`](docs/agents.md) | Agent operating brief |
-| [`AGENTS.md`](AGENTS.md) | Root pointer to all docs |
+The public repository keeps code, scripts, and Makefile targets under version
+control. Large data, generated results, local agent notes, and manuscript
+source packages are intentionally omitted from Git and regenerated locally.
+Use the Makefile targets below for the current experiment pipeline.
 
 ---
 
@@ -271,16 +269,19 @@ Three-level checkpoint system ensures no silent regressions:
 
 ---
 
-## Future Directions
+## Path 2: Tier-1 Transportation Rework
 
-- **Paper writing**: LaTeX framing, related work section, publication-quality figures
-- **Tuned LP pipeline**: Re-run with optimal params (0.50/5min) for >30% headline
-- **OSRM integration**: Real road routing for NYC scenarios (currently Haversine fallback)
-- **Cross-city transfer**: Chicago results are mixed — needs careful demand-scale calibration and framing as limitation/future work
-- **Macro-zone RL**: Reduce action space to 8-16 regions (k-means on hex grid) for feasible RL learning
-- **MPC repositioning**: Use calibrated sim for short-horizon rollouts instead of LP forecast
-- **Multi-regime transfer**: Train on regime A, test on regime B
-- **Additional cities**: Beyond Chicago, test on other TLC-style datasets
+The active next phase targets Transportation Science or Transportation Research
+Part C, with IEEE T-ITS as fallback.
+
+Main planned upgrades:
+
+- learned similarity weights with leakage-safe train/holdout splits,
+- a queueing-based wait-bound theorem replacing the shallow LP-feasibility theorem,
+- re-implemented external baselines in this simulator,
+- preregistered 10-seed main experiments,
+- optional AMoD/charging experiment for TR-C framing,
+- an arXiv v2 only after new results or claims change.
 
 ---
 
